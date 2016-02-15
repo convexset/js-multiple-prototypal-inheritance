@@ -1,0 +1,24 @@
+{
+  "name": "multiple-prototypal-inheritance",
+  "version": "0.0.1",
+  "description": "Multiple prototypal inheritance for JavaScript",
+  "main": "multiple-prototypal-inheritance.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/convexset/js-multiple-prototypal-inheritance.git"
+  },
+  "keywords": [
+    "objects",
+    "prototype",
+    "multiple inheritance"
+  ],
+  "author": "Jeremy Chen <convexset@gmail.com> (https://github.com/convexset/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/convexset/js-multiple-prototypal-inheritance/issues"
+  },
+  "homepage": "https://github.com/convexset/js-multiple-prototypal-inheritance#readme"
+}
