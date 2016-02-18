@@ -2,26 +2,12 @@ function hasOwnProperty(o, key) {
 	return Object.prototype.hasOwnProperty.call(o, key);
 }
 
-function dumpObject(o, name, sep) {
-	var s = [];
-	s.push((!!name ? ('[' + name + '] ') : "") + "{");
-	Object.getOwnPropertyNames(o)
-		.forEach(function(key) {
-			var propDesc = Object.getOwnPropertyDescriptor(o, key);
-			var attrs = [key];
-			if (!propDesc.enumerable) {
-				attrs.push('NE');
-			}
-			if (!propDesc.configurable) {
-				attrs.push('NC');
-			}
-			if (!propDesc.writable) {
-				attrs.push('NW');
-			}
-			s.push("  [" + attrs.join('|') + ']: ' + propDesc.value.toString());
-		});
-	s.push("}");
-	return s.join(sep);
+function shallowCopy(o) {
+	var oCopy = Object.create(Object.getPrototypeOf(o));
+	Object.getOwnPropertyNames(o).forEach(function(key) {
+		Object.defineProperty(oCopy, key, Object.getOwnPropertyDescriptor(o, key));
+	});
+	return oCopy;
 }
 
 (function(name, factory) {
@@ -51,8 +37,7 @@ function dumpObject(o, name, sep) {
 
 	var REGISTER_CHILD = Symbol('MultiplePrototypalInheritance/registerChild');
 	var REGENERATE_MERGED_PROTOTYPE = Symbol('MultiplePrototypalInheritance/regenerateMergedPrototype');
-
-	var id = 0;
+	var PROTOTYPE_TREE_NODE_KEY = "___prototype_tree_node___";
 
 	function PrototypeTreeNode(newNodePrototype, parentNodes) {
 		if (typeof newNodePrototype === "undefined") {
@@ -72,34 +57,29 @@ function dumpObject(o, name, sep) {
 			throw new Error('Parent items should be an array of PrototypeTreeNode\'s.');
 		}
 
-console.log('~')
-id += 1;
-console.log("[Creation] Id: ", id, newNodePrototype, parentNodes);
-var _id = id;
-
+		// Private Data
 		var _mergedPrototype = Object.create(null);
 		var _localPrototype = Object.create(null);
+		var _parentNodes = parentNodes.map(x => x);
+		var _childNodes = [];
+		var _itemSource = {};
+
 		Object.getOwnPropertyNames(newNodePrototype).forEach(function(key) {
 			var propDesc = Object.getOwnPropertyDescriptor(newNodePrototype, key);
-console.log(" - " + key + ":", propDesc)
 			Object.defineProperty(_mergedPrototype, key, propDesc);
 			Object.defineProperty(_localPrototype, key, propDesc);
 		});
 
-		var _parentNodes = parentNodes.map(x => x);
-		var _childNodes = [];
-
 		var node = Object.create(nodePrototype, {
-_id: {enumerable: true, configurable:true, get: () => _id},
 			localPrototype: {
 				enumerable: true,
 				configurable: false,
-				get: () => _localPrototype
+				get: () => shallowCopy(_localPrototype)
 			},
 			mergedPrototype: {
 				enumerable: true,
 				configurable: false,
-				get: () => _mergedPrototype
+				get: () => shallowCopy(_mergedPrototype)
 			},
 			parentNodes: {
 				enumerable: true,
@@ -111,14 +91,34 @@ _id: {enumerable: true, configurable:true, get: () => _id},
 				configurable: false,
 				get: () => _childNodes.map(x => x)
 			},
-			removeFromPrototype: {
+			createLinkedObject: {
 				enumerable: false,
 				configurable: false,
 				writable: false,
-				value: function removeFromPrototype(key) {
-					if (hasOwnProperty(this.localPrototype, key)) {
-						delete localPrototype[key];
-						delete mergedPrototype[key];
+				value: function createLinkedObject() {
+					return Object.create(_mergedPrototype);
+				}
+			},
+			itemSource: {
+				enumerable: false,
+				configurable: false,
+				writable: false,
+				value: function itemSource(key) {
+					return _itemSource[key];
+				}
+			},
+			removeFromNodePrototype: {
+				enumerable: false,
+				configurable: false,
+				writable: false,
+				value: function removeFromNodePrototype(key) {
+					var currPropDesc = Object.getOwnPropertyDescriptor(_localPrototype, key);
+					if (!!currPropDesc) {
+						if (!currPropDesc.configurable) {
+							throw new Error(key + ' is not configurable.');
+						}
+						delete _localPrototype[key];
+						delete _mergedPrototype[key];
 						this[REGENERATE_MERGED_PROTOTYPE]();
 					} else {
 						throw new Error('No such property.');
@@ -135,7 +135,7 @@ _id: {enumerable: true, configurable:true, get: () => _id},
 						configurable: false,
 						writable: false,
 						value: value
-					}
+					};
 					this.updatePrototypeViaDescriptor(key, newPropDesc);
 				}
 			},
@@ -150,17 +150,9 @@ _id: {enumerable: true, configurable:true, get: () => _id},
 						throw new Error(key + ' is not configurable.');
 					}
 
-console.log("[updatePrototypeViaDescriptor] Id: ", _id, '; [' + key + '] ', currPropDesc, '-->', propDesc)
-console.log(dumpObject(_localPrototype, '_localPrototype', '  '));
-console.log(dumpObject(_mergedPrototype, '_mergedPrototype', '  '));
-console.log("[" + this._id + "] # parents:", this.parentNodes.length);
-console.log("[" + this._id + "] # children:", this.childNodes.length);
 					Object.defineProperty(_localPrototype, key, propDesc);
 					Object.defineProperty(_mergedPrototype, key, propDesc);
-console.log(dumpObject(_localPrototype, '_localPrototype', '  '));
-console.log(dumpObject(_mergedPrototype, '_mergedPrototype', '  '));
-console.log("[" + this._id + "] # parents:", this.parentNodes.length);
-console.log("[" + this._id + "] # children:", this.childNodes.length);
+					console.log('Updating...', currPropDesc, ' --->', propDesc)
 					this[REGENERATE_MERGED_PROTOTYPE]();
 				}
 			},
@@ -169,11 +161,6 @@ console.log("[" + this._id + "] # children:", this.childNodes.length);
 				configurable: false,
 				writable: false,
 				value: function registerChild(childNode) {
-console.log("[registerChild] Id: ", _id, node)
-console.log(dumpObject(_localPrototype, '_localPrototype', '  '));
-console.log(dumpObject(_mergedPrototype, '_mergedPrototype', '  '));
-console.log("[" + this._id + "] # parents:", this.parentNodes.length);
-console.log("[" + this._id + "] # children:", this.childNodes.length);
 					if (!!childNode && (Object.getPrototypeOf(childNode) !== PrototypeTreeNode.prototype)) {
 						throw new Error('childNode should be of type PrototypeTreeNode.');
 					}
@@ -189,32 +176,43 @@ console.log("[" + this._id + "] # children:", this.childNodes.length);
 				writable: false,
 				value: function regenerateMergedPrototype() {
 					var parentMergedPrototypes = this.parentNodes.map(parentNode => parentNode.mergedPrototype);
-console.log("[regenerateMergedPrototype] Id: ", _id, parentMergedPrototypes.map(mp => dumpObject(mp, '', '  ')), '; #PN: ' + this.parentNodes.length, ', #CN: ' + this.childNodes.length)
-console.log(dumpObject(_localPrototype, '_localPrototype', '  '));
-console.log(dumpObject(_mergedPrototype, '_mergedPrototype', '  '));
-console.log("[" + this._id + "] # parents:", this.parentNodes.length);
-console.log("[" + this._id + "] # children:", this.childNodes.length);
 					var priorItems = Object.getOwnPropertyNames(_localPrototype);
-console.log("[init merged] id: " + _id, 'LP:', dumpObject(_localPrototype, '', '  '), 'MP:', dumpObject(_mergedPrototype, '', '  '))
-					parentMergedPrototypes.forEach(function(parentMergedPrototype) {
-console.log(" * ", dumpObject(parentMergedPrototype, '', '  '), priorItems)
+					console.log('prior items:', priorItems)
+
+					var propDescPTN = Object.getOwnPropertyDescriptor(_mergedPrototype, PROTOTYPE_TREE_NODE_KEY);
+					if (!propDescPTN) {
+						Object.defineProperty(_mergedPrototype, PROTOTYPE_TREE_NODE_KEY, {
+							enumerable: false,
+							configurable: false,
+							writable: false,
+							value: this
+						});
+					}
+
+					_itemSource = {};
+					priorItems.forEach(function(key) {
+						_itemSource[key] = -1;
+					});
+					priorItems.push(PROTOTYPE_TREE_NODE_KEY);
+
+					parentMergedPrototypes.forEach(function(parentMergedPrototype, idx) {
 						Object.getOwnPropertyNames(parentMergedPrototype).forEach(function(key) {
 							if (priorItems.indexOf(key) !== -1) {
 								return;
 							}
 							var propDesc = Object.getOwnPropertyDescriptor(parentMergedPrototype, key);
-console.log("    - " + key + ":", propDesc)
 							Object.defineProperty(_mergedPrototype, key, propDesc);
 							priorItems.push(key);
+							_itemSource[key] = idx;
+							console.log(' - ' + key + ':', propDesc, ' from ' + _itemSource[key], ' ---> ', Object.getOwnPropertyDescriptor(_mergedPrototype, key))
 						});
 					});
-	
-console.log("[final merged] id: " + _id, dumpObject(node.mergedPrototype, '', '  '))
+
 					// Notify Child Nodes
 					this.childNodes.forEach(function(childNode) {
+						console.log('Notifying child...')
 						childNode[REGENERATE_MERGED_PROTOTYPE]();
 					});
-console.log('~')
 				}
 			},
 		});
@@ -228,14 +226,6 @@ console.log('~')
 	}
 
 	var nodePrototype = Object.create(null, {
-		createLinkedObject: {
-			enumerable: false,
-			configurable: false,
-			writable: false,
-			value: function createLinkedObject() {
-				return Object.create(this.mergedPrototype);
-			}
-		},
 		allAncestors: {
 			enumerable: false,
 			configurable: false,
@@ -253,7 +243,18 @@ console.log('~')
 			get: function inheritsFrom(node) {
 				return this.allAncestors.indexOf(node) !== -1;
 			}
-		}
+		},
+		constructObject: {
+			enumerable: false,
+			configurable: false,
+			writable: false,
+			value: function constructObject(constructor) {
+				var args = Array.prototype.slice.call(arguments, 1);
+				var newObject = this.createLinkedObject();
+				constructor.apply(newObject, args);
+				return newObject;
+			}
+		},
 	});
 	PrototypeTreeNode.prototype = nodePrototype;
 
