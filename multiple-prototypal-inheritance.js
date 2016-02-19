@@ -71,12 +71,20 @@ function shallowCopy(o) {
 		});
 
 		var node = Object.create(nodePrototype, {
-			localPrototype: {
+			isPrototypeOf: {
+				enumerable: true,
+				configurable: false,
+				writeable: false,
+				value: function isPrototypeOf(o) {
+					return Object.getPrototypeOf(o) === _mergedPrototype
+				}
+			},
+			localPrototypeCopy: {
 				enumerable: true,
 				configurable: false,
 				get: () => shallowCopy(_localPrototype)
 			},
-			mergedPrototype: {
+			mergedPrototypeCopy: {
 				enumerable: true,
 				configurable: false,
 				get: () => shallowCopy(_mergedPrototype)
@@ -152,7 +160,6 @@ function shallowCopy(o) {
 
 					Object.defineProperty(_localPrototype, key, propDesc);
 					Object.defineProperty(_mergedPrototype, key, propDesc);
-					console.log('Updating...', currPropDesc, ' --->', propDesc)
 					this[REGENERATE_MERGED_PROTOTYPE]();
 				}
 			},
@@ -175,9 +182,8 @@ function shallowCopy(o) {
 				configurable: false,
 				writable: false,
 				value: function regenerateMergedPrototype() {
-					var parentMergedPrototypes = this.parentNodes.map(parentNode => parentNode.mergedPrototype);
+					var parentMergedPrototypes = this.parentNodes.map(parentNode => parentNode.mergedPrototypeCopy);
 					var priorItems = Object.getOwnPropertyNames(_localPrototype);
-					console.log('prior items:', priorItems)
 
 					var propDescPTN = Object.getOwnPropertyDescriptor(_mergedPrototype, PROTOTYPE_TREE_NODE_KEY);
 					if (!propDescPTN) {
@@ -204,13 +210,11 @@ function shallowCopy(o) {
 							Object.defineProperty(_mergedPrototype, key, propDesc);
 							priorItems.push(key);
 							_itemSource[key] = idx;
-							console.log(' - ' + key + ':', propDesc, ' from ' + _itemSource[key], ' ---> ', Object.getOwnPropertyDescriptor(_mergedPrototype, key))
 						});
 					});
 
 					// Notify Child Nodes
 					this.childNodes.forEach(function(childNode) {
-						console.log('Notifying child...')
 						childNode[REGENERATE_MERGED_PROTOTYPE]();
 					});
 				}

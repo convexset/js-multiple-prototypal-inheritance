@@ -13,7 +13,8 @@
   "keywords": [
     "objects",
     "prototype",
-    "multiple inheritance"
+    "multiple inheritance",
+    "reactive"
   ],
   "author": "Jeremy Chen <convexset@gmail.com> (https://github.com/convexset/)",
   "license": "MIT",
