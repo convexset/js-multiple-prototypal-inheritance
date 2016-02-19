@@ -240,7 +240,8 @@ function shallowCopy(o) {
 		inheritsFrom: {
 			enumerable: false,
 			configurable: false,
-			get: function inheritsFrom(node) {
+			writable: false,
+			value: function inheritsFrom(node) {
 				return this.allAncestors.indexOf(node) !== -1;
 			}
 		},
