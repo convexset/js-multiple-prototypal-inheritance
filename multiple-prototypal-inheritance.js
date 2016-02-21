@@ -10,6 +10,53 @@ function shallowCopy(o) {
 	return oCopy;
 }
 
+function isUndefined(x) {
+	return (typeof x === "undefined");
+}
+
+function applyDefaultOptions(options, defaultOptions) {
+	if (!options) {
+		options = {};
+	}
+	Object.keys(defaultOptions).forEach(function(optName) {
+		if (isUndefined(options[optName])) {
+			options[optName] = defaultOptions[optName];
+		}
+	});
+}
+
+// polyfill Array#includes
+if (!Array.prototype.includes) {
+	Array.prototype.includes = function(searchElement /*, fromIndex*/ ) {
+		'use strict';
+		var O = Object(this);
+		var len = parseInt(O.length) || 0;
+		if (len === 0) {
+			return false;
+		}
+		var n = parseInt(arguments[1]) || 0;
+		var k;
+		if (n >= 0) {
+			k = n;
+		} else {
+			k = len + n;
+			if (k < 0) {
+				k = 0;
+			}
+		}
+		var currentElement;
+		while (k < len) {
+			currentElement = O[k];
+			if (searchElement === currentElement ||
+				(searchElement !== searchElement && currentElement !== currentElement)) { // NaN !== NaN
+				return true;
+			}
+			k++;
+		}
+		return false;
+	};
+}
+
 (function(name, factory) {
 	"use strict";
 
@@ -39,7 +86,7 @@ function shallowCopy(o) {
 	var REGENERATE_MERGED_PROTOTYPE = Symbol('MultiplePrototypalInheritance/regenerateMergedPrototype');
 	var PROTOTYPE_TREE_NODE_KEY = "___prototype_tree_node___";
 
-	function PrototypeTreeNode(newNodePrototype, parentNodes) {
+	function PrototypeTreeNode(newNodePrototype, parentNodes, options) {
 		if (typeof newNodePrototype === "undefined") {
 			newNodePrototype = Object.create(null);
 		}
@@ -71,7 +118,7 @@ function shallowCopy(o) {
 		});
 
 		var node = Object.create(nodePrototype, {
-			isPrototypeOf: {
+			isPrototypeNodeOf: {
 				enumerable: true,
 				configurable: false,
 				writeable: false,
@@ -113,6 +160,15 @@ function shallowCopy(o) {
 				writable: false,
 				value: function itemSource(key) {
 					return _itemSource[key];
+				}
+			},
+			setCustomSourceSelection: {
+				enumerable: false,
+				configurable: false,
+				writable: false,
+				value: function setCustomSourceSelection(customSourceSelection) {
+					options.customSourceSelection = shallowCopy(customSourceSelection);
+					this[REGENERATE_MERGED_PROTOTYPE]();
 				}
 			},
 			removeFromNodePrototype: {
@@ -168,10 +224,10 @@ function shallowCopy(o) {
 				configurable: false,
 				writable: false,
 				value: function registerChild(childNode) {
-					if (!!childNode && (Object.getPrototypeOf(childNode) !== PrototypeTreeNode.prototype)) {
+					if (!childNode || (Object.getPrototypeOf(childNode) !== PrototypeTreeNode.prototype)) {
 						throw new Error('childNode should be of type PrototypeTreeNode.');
 					}
-					if ((this === childNode) || (this.allAncestors.indexOf(childNode) !== -1)) {
+					if ((this === childNode) || this.allAncestors.includes(childNode)) {
 						throw new Error('Circular dependency');
 					}
 					_childNodes.push(childNode);
@@ -182,39 +238,62 @@ function shallowCopy(o) {
 				configurable: false,
 				writable: false,
 				value: function regenerateMergedPrototype() {
-					var parentMergedPrototypes = this.parentNodes.map(parentNode => parentNode.mergedPrototypeCopy);
+					var self = this;
+
+					// Figure out from where to get what item: localPrototype items
+					_itemSource = {};
+					Object.getOwnPropertyNames(_localPrototype).forEach(function(itemName) {
+						_itemSource[itemName] = -1;
+					});
+
+					// localPrototype items already stuffed into the mergedPrototype
+					// in updatePrototypeViaDescriptor and "new PrototypeTreeNode"
 					var priorItems = Object.getOwnPropertyNames(_localPrototype);
 
+					// provide back link to this PrototypeTreeNode
 					var propDescPTN = Object.getOwnPropertyDescriptor(_mergedPrototype, PROTOTYPE_TREE_NODE_KEY);
 					if (!propDescPTN) {
 						Object.defineProperty(_mergedPrototype, PROTOTYPE_TREE_NODE_KEY, {
 							enumerable: false,
 							configurable: false,
 							writable: false,
-							value: this
+							value: self
 						});
 					}
-
-					_itemSource = {};
-					priorItems.forEach(function(key) {
-						_itemSource[key] = -1;
-					});
 					priorItems.push(PROTOTYPE_TREE_NODE_KEY);
 
-					parentMergedPrototypes.forEach(function(parentMergedPrototype, idx) {
+					// ... now for the rest
+					self.parentNodes.forEach(function(parentNode, idx) {
+						var parentMergedPrototype = parentNode.mergedPrototypeCopy;
+
 						Object.getOwnPropertyNames(parentMergedPrototype).forEach(function(key) {
-							if (priorItems.indexOf(key) !== -1) {
+							if (priorItems.includes(key)) {
 								return;
 							}
+
+							// is there is a custom selection...
+							// ... which is valid (in parent list)
+							// ... and the key is present in that mergedPrototype
+							// ... and it's not this parent
+							if (!!options.customSourceSelection[key] &&
+								(self.parentNodes.includes(options.customSourceSelection[key])) &&
+								!isUndefined(options.customSourceSelection[key].mergedPrototypeCopy[key]) &&
+								(parentNode !== options.customSourceSelection[key])
+							) {
+								return;
+							}
+
 							var propDesc = Object.getOwnPropertyDescriptor(parentMergedPrototype, key);
 							Object.defineProperty(_mergedPrototype, key, propDesc);
 							priorItems.push(key);
+
+							// Note where this item comes from
 							_itemSource[key] = idx;
 						});
 					});
 
 					// Notify Child Nodes
-					this.childNodes.forEach(function(childNode) {
+					self.childNodes.forEach(function(childNode) {
 						childNode[REGENERATE_MERGED_PROTOTYPE]();
 					});
 				}
@@ -241,12 +320,38 @@ function shallowCopy(o) {
 				return ancestors;
 			}
 		},
+		allDescendants: {
+			enumerable: false,
+			configurable: false,
+			get: function getAllDescendants() {
+				var descendants = this.childNodes;
+				this.childNodes.forEach(function(childNode) {
+					descendants = descendants.concat(childNode.allDescendants);
+				});
+				return descendants;
+			}
+		},
 		inheritsFrom: {
 			enumerable: false,
 			configurable: false,
 			writable: false,
 			value: function inheritsFrom(node) {
-				return this.allAncestors.indexOf(node) !== -1;
+				return (node === this) || (this.allAncestors.indexOf(node) !== -1);
+			}
+		},
+		isAncestorPrototypeNodeOf: {
+			enumerable: false,
+			configurable: false,
+			writable: false,
+			value: function isAncestorPrototypeNodeOf(o) {
+				var thisAndAllDescendants = ([this]).concat(this.allDescendants);
+				for (var i = 0; i < thisAndAllDescendants.length; i++) {
+					var ptn = thisAndAllDescendants[i];
+					if (ptn.isPrototypeNodeOf(o)) {
+						return true;
+					}
+				}
+				return false;
 			}
 		},
 		constructObject: {
@@ -267,9 +372,28 @@ function shallowCopy(o) {
 		enumerable: false,
 		configurable: false,
 		writable: false,
-		value: function createNode(newNodePrototype, parentNodes) {
-			return new PrototypeTreeNode(newNodePrototype, parentNodes);
+		value: function createNode(newNodePrototype, parentNodes, options) {
+			if (!options) {
+				options = {};
+			}
+			applyDefaultOptions(options, {
+				customSourceSelection: {}
+			});
+
+			var opts = shallowCopy(options);
+			if (!!opts.customSourceSelection) {
+				opts.customSourceSelection = shallowCopy(opts.customSourceSelection);
+			}
+
+			return new PrototypeTreeNode(newNodePrototype, parentNodes, opts);
 		}
+	});
+
+	Object.defineProperty(_mpi, 'PrototypeTreeNodePrototype', {
+		enumerable: false,
+		configurable: false,
+		writable: false,
+		value: nodePrototype
 	});
 
 	return _mpi;
