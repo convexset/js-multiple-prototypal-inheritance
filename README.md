@@ -332,6 +332,9 @@ p2.updatePrototypeViaDescriptor('b', {
     configurable: true,
     value: 999
 });
+console.log('p3#customSourceSelection <-- {}');
+p3.setCustomSourceSelection({});
+
 console.log('');
 console.log('p1', dumpObject(p1.localPrototypeCopy), dumpObject(Object.getPrototypeOf(p1_instance), '', '   '), '\n# Children: ', p1.childNodes.length);
 /*
