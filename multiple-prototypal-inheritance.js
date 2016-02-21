@@ -10,6 +10,37 @@ function shallowCopy(o) {
 	return oCopy;
 }
 
+function isDate(o) {
+	return Object.prototype.toString.call(o) === '[object Date]';
+}
+
+function deepCopy(o) {
+	// types to "just return"
+	if (['Function', 'Boolean', 'String', 'Number', 'RegExp', 'Symbol']
+		.filter(function(t) {
+			return Object.prototype.toString.call(o) === '[object ' + t + ']';
+		})
+		.length > 0) {
+		return o;
+	}
+	if (isDate(o)) {
+		return new Date(o.getTime());
+	}
+	if (Array.isArray(o)) {
+		return o.map(x => x);
+	}
+
+	var oCopy = Object.create(Object.getPrototypeOf(o));
+	Object.getOwnPropertyNames(o).forEach(function(key) {
+		var props = Object.getOwnPropertyDescriptor(o, key);
+		if (typeof props.value !== "undefined") {
+			props.value = deepCopy(props.value);
+		}
+		Object.defineProperty(oCopy, key, props);
+	});
+	return oCopy;
+}
+
 function isUndefined(x) {
 	return (typeof x === "undefined");
 }
@@ -54,6 +85,13 @@ if (!Array.prototype.includes) {
 			k++;
 		}
 		return false;
+	};
+}
+
+// polyfill Array.isArray
+if (!Array.isArray) {
+	Array.isArray = function(arg) {
+		return Object.prototype.toString.call(arg) === '[object Array]';
 	};
 }
 
@@ -123,18 +161,18 @@ if (!Array.prototype.includes) {
 				configurable: false,
 				writeable: false,
 				value: function isPrototypeOf(o) {
-					return Object.getPrototypeOf(o) === _mergedPrototype
+					return Object.getPrototypeOf(o) === _mergedPrototype;
 				}
 			},
 			localPrototypeCopy: {
 				enumerable: true,
 				configurable: false,
-				get: () => shallowCopy(_localPrototype)
+				get: () => deepCopy(_localPrototype)
 			},
 			mergedPrototypeCopy: {
 				enumerable: true,
 				configurable: false,
-				get: () => shallowCopy(_mergedPrototype)
+				get: () => deepCopy(_mergedPrototype)
 			},
 			parentNodes: {
 				enumerable: true,
