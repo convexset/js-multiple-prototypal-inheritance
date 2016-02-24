@@ -1,0 +1,1 @@
+/Users/jeremychen/meteor-packages/multiple-prototypal-inheritance/README.md

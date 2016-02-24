@@ -15,6 +15,9 @@ The tool may be used to create simple (empty) prototype-linked objects, or to pe
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**
 
+- [Install](#install)
+  - [Meteor Package](#meteor-package)
+  - [npm Package](#npm-package)
 - [Usage:](#usage)
   - [By Example](#by-example)
   - [`PrototypeTreeNode` Creation](#prototypetreenode-creation)
@@ -25,6 +28,16 @@ The tool may be used to create simple (empty) prototype-linked objects, or to pe
 - [An Extended Example](#an-extended-example)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+## Install
+
+### Meteor Package
+
+This is available as [`convexset:multiple-prototypal-inheritance`](https://atmospherejs.com/convexset/multiple-prototypal-inheritance) on [Atmosphere](https://atmospherejs.com/). (Install with `meteor add convexset:multiple-prototypal-inheritance`.)
+
+### npm Package
+
+... also available as [`multiple-prototypal-inheritance`](https://www.npmjs.com/package/multiple-prototypal-inheritance) on [npm](https://www.npmjs.com/). (Install with `npm install multiple-prototypal-inheritance`.)
 
 ## Usage:
 

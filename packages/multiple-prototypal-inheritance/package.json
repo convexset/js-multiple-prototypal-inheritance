@@ -1,6 +1,6 @@
 {
   "name": "multiple-prototypal-inheritance",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "Multiple prototypal inheritance for JavaScript",
   "main": "multiple-prototypal-inheritance.js",
   "scripts": {
@@ -16,6 +16,10 @@
     "multiple inheritance",
     "reactive"
   ],
+  "dependencies": {
+    "underscore": "^1.8.3",
+    "package-utils": "^0.1.12"
+  },
   "author": "Jeremy Chen <convexset@gmail.com> (https://github.com/convexset/)",
   "license": "MIT",
   "bugs": {

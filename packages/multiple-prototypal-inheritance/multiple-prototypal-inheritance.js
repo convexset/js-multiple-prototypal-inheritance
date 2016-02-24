@@ -1,124 +1,84 @@
-function hasOwnProperty(o, key) {
-	return Object.prototype.hasOwnProperty.call(o, key);
-}
+/* global MultiplePrototypalInheritance: true */
+/* global _: true */
+/* global PackageUtilities: true */
 
-function shallowCopy(o) {
-	var oCopy = Object.create(Object.getPrototypeOf(o));
-	Object.getOwnPropertyNames(o).forEach(function(key) {
-		Object.defineProperty(oCopy, key, Object.getOwnPropertyDescriptor(o, key));
-	});
-	return oCopy;
-}
+(function(root, name, factory) {
+	if (typeof module === "object" && module.exports) {
+		// Node or CommonJS
+		module.exports = factory(require("underscore"), require("package-utils"));
+	} else {
+		// The Else Condition
 
-function isDate(o) {
-	return Object.prototype.toString.call(o) === '[object Date]';
-}
+		// Find the global object for export to both the browser and web workers.
+		var globalObject = (typeof window === 'object') && window ||
+			(typeof self === 'object') && self;
 
-function deepCopy(o) {
-	// types to "just return"
-	if (['Function', 'Boolean', 'String', 'Number', 'RegExp', 'Symbol']
-		.filter(function(t) {
-			return Object.prototype.toString.call(o) === '[object ' + t + ']';
-		})
-		.length > 0) {
-		return o;
-	}
-	if (isDate(o)) {
-		return new Date(o.getTime());
-	}
-	if (Array.isArray(o)) {
-		return o.map(x => x);
-	}
-
-	var oCopy = Object.create(Object.getPrototypeOf(o));
-	Object.getOwnPropertyNames(o).forEach(function(key) {
-		var props = Object.getOwnPropertyDescriptor(o, key);
-		if (typeof props.value !== "undefined") {
-			props.value = deepCopy(props.value);
+		var thingie = factory(_, PackageUtilities);
+		root[name] = thingie;
+		if (!!globalObject) {
+			globalObject[name] = thingie;
 		}
-		Object.defineProperty(oCopy, key, props);
-	});
-	return oCopy;
-}
 
-function isUndefined(x) {
-	return (typeof x === "undefined");
-}
-
-function applyDefaultOptions(options, defaultOptions) {
-	if (!options) {
-		options = {};
+		// Poor Meteor
+		MultiplePrototypalInheritance = thingie;
 	}
-	Object.keys(defaultOptions).forEach(function(optName) {
-		if (isUndefined(options[optName])) {
-			options[optName] = defaultOptions[optName];
-		}
-	});
-}
+}(this, 'MultiplePrototypalInheritance', function(_, PackageUtilities) {
 
-// polyfill Array#includes
-if (!Array.prototype.includes) {
-	Array.prototype.includes = function(searchElement /*, fromIndex*/ ) {
-		'use strict';
-		var O = Object(this);
-		var len = parseInt(O.length) || 0;
-		if (len === 0) {
+	var _mpi = new (function MultiplePrototypalInheritance() {})();
+
+	function isUndefined(x) {
+		return (typeof x === "undefined");
+	}
+
+	function applyDefaultOptions(options, defaultOptions) {
+		if (!options) {
+			options = {};
+		}
+		Object.keys(defaultOptions).forEach(function(optName) {
+			if (isUndefined(options[optName])) {
+				options[optName] = defaultOptions[optName];
+			}
+		});
+	}
+
+	// polyfill Array#includes
+	if (!Array.prototype.includes) {
+		Array.prototype.includes = function(searchElement /*, fromIndex*/ ) {
+			'use strict';
+			var O = Object(this);
+			var len = parseInt(O.length) || 0;
+			if (len === 0) {
+				return false;
+			}
+			var n = parseInt(arguments[1]) || 0;
+			var k;
+			if (n >= 0) {
+				k = n;
+			} else {
+				k = len + n;
+				if (k < 0) {
+					k = 0;
+				}
+			}
+			var currentElement;
+			while (k < len) {
+				currentElement = O[k];
+				if (searchElement === currentElement ||
+					(searchElement !== searchElement && currentElement !== currentElement)) { // NaN !== NaN
+					return true;
+				}
+				k++;
+			}
 			return false;
-		}
-		var n = parseInt(arguments[1]) || 0;
-		var k;
-		if (n >= 0) {
-			k = n;
-		} else {
-			k = len + n;
-			if (k < 0) {
-				k = 0;
-			}
-		}
-		var currentElement;
-		while (k < len) {
-			currentElement = O[k];
-			if (searchElement === currentElement ||
-				(searchElement !== searchElement && currentElement !== currentElement)) { // NaN !== NaN
-				return true;
-			}
-			k++;
-		}
-		return false;
-	};
-}
-
-// polyfill Array.isArray
-if (!Array.isArray) {
-	Array.isArray = function(arg) {
-		return Object.prototype.toString.call(arg) === '[object Array]';
-	};
-}
-
-(function(name, factory) {
-	"use strict";
-
-	// Find the global object for export to both the browser and web workers.
-	var globalObject = (typeof window === 'object') && window ||
-		(typeof self === 'object') && self;
-
-	// Setup for different environments
-	if (typeof exports !== 'undefined') {
-		// Node.js or CommonJS
-		factory(exports);
-	} else if (globalObject) {
-		// Export globally even when using AMD for cases when this script
-		// is loaded with others that may still expect a global.
-		globalObject[name] = factory({});
-
-		// Register with AMD.
-		if (typeof define === 'function' && define.amd) {
-			define([], function() {
-				return globalObject[name];
-			});
-		}
+		};
 	}
-})('MultiplePrototypalInheritance', function(_mpi) {
+
+	// polyfill Array.isArray
+	if (!Array.isArray) {
+		Array.isArray = function(arg) {
+			return Object.prototype.toString.call(arg) === '[object Array]';
+		};
+	}
 
 	var REGISTER_CHILD = Symbol('MultiplePrototypalInheritance/registerChild');
 	var REGENERATE_MERGED_PROTOTYPE = Symbol('MultiplePrototypalInheritance/regenerateMergedPrototype');
@@ -167,12 +127,12 @@ if (!Array.isArray) {
 			localPrototypeCopy: {
 				enumerable: true,
 				configurable: false,
-				get: () => deepCopy(_localPrototype)
+				get: () => PackageUtilities.deepCopy(_localPrototype)
 			},
 			mergedPrototypeCopy: {
 				enumerable: true,
 				configurable: false,
-				get: () => deepCopy(_mergedPrototype)
+				get: () => PackageUtilities.deepCopy(_mergedPrototype)
 			},
 			parentNodes: {
 				enumerable: true,
@@ -205,7 +165,7 @@ if (!Array.isArray) {
 				configurable: false,
 				writable: false,
 				value: function setCustomSourceSelection(customSourceSelection) {
-					options.customSourceSelection = shallowCopy(customSourceSelection);
+					options.customSourceSelection = PackageUtilities.shallowCopy(customSourceSelection);
 					this[REGENERATE_MERGED_PROTOTYPE]();
 				}
 			},
@@ -418,9 +378,9 @@ if (!Array.isArray) {
 				customSourceSelection: {}
 			});
 
-			var opts = shallowCopy(options);
+			var opts = PackageUtilities.shallowCopy(options);
 			if (!!opts.customSourceSelection) {
-				opts.customSourceSelection = shallowCopy(opts.customSourceSelection);
+				opts.customSourceSelection = PackageUtilities.shallowCopy(opts.customSourceSelection);
 			}
 
 			return new PrototypeTreeNode(newNodePrototype, parentNodes, opts);
@@ -435,4 +395,4 @@ if (!Array.isArray) {
 	});
 
 	return _mpi;
-});
+}));
