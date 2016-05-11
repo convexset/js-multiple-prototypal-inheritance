@@ -2,6 +2,8 @@
 
 This package provides for a form of multiple-prototypal inheritance for JavaScript objects.
 
+## Description
+
 In particular:
  - each "class" that inherits from one or more prototypes (which themselves may inherit from other prototypes) is a `PrototypeTreeNode` at the terminal end of an "inverted tree" of `PrototypeTreeNode`'s
  - `PrototypeTreeNode`'s contain "local" prototype elements and may also inherit from none (i.e.: `null`) or some number of other prototypes encapsulated in `PrototypeTreeNode`'s
@@ -15,6 +17,7 @@ The tool may be used to create simple (empty) prototype-linked objects, or to pe
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
 
+- [Description](#description)
 - [Install](#install)
   - [Meteor Package](#meteor-package)
   - [npm Package](#npm-package)

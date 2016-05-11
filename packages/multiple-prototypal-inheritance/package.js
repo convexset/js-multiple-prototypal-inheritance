@@ -1,6 +1,6 @@
 Package.describe({
 	name: 'convexset:multiple-prototypal-inheritance',
-	version: '0.0.4',
+	version: '0.0.4_1',
 	summary: 'Multple prototypal inheritance',
 	git: 'https://github.com/convexset/js-multiple-prototypal-inheritance',
 	documentation: 'README.md'
@@ -8,7 +8,11 @@ Package.describe({
 
 Package.onUse(function(api) {
 	api.versionsFrom('1.2.1');
-	api.use(['ecmascript', 'underscore', 'convexset:package-utils@0.1.12']);
+	api.use([
+		'ecmascript',
+		'underscore',
+		'convexset:package-utils@0.1.14'
+	]);
 	api.addFiles('multiple-prototypal-inheritance.js');
     api.export('MultiplePrototypalInheritance');
 });
