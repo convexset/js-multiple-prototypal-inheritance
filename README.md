@@ -1,5 +1,7 @@
 # MultiplePrototypalInheritance
 
+**Consider this package to be deprecated. Use the version [on npm](https://www.npmjs.com/package/multiple-prototypal-inheritance).**
+
 This package provides for a form of multiple-prototypal inheritance for JavaScript objects.
 
 ## Description
